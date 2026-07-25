@@ -228,7 +228,7 @@ achievements — id, user_id, achievement, earned_at
 **VIT Bhopal University**<br>
 School of Computing Science and Engineering<br>
 B.Tech — Computer Science and Engineering<br>
-April 2025
+April 2026
 
 ---
 
