@@ -6,32 +6,54 @@ import { persist } from 'zustand/middleware'
 //  Handles all expense logic + classification
 // ─────────────────────────────────────────
  
-// Simple rule-based classifier (no ML needed for hackathon)
-// Your teammate can swap this with TensorFlow.js later
+// FIX (security/consistency review, July 2026): this used to be an
+// independently-maintained keyword list that had drifted from the backend's
+// classifier in app.py — the two disagreed on real inputs (e.g. this file
+// defaulted unclear expenses to 'want', app.py defaults to 'need'). That
+// meant a user could see one classification instantly here and a different
+// one once the server round-trip landed.
+//
+// app.py's classify_expense() is the single source of truth. This copy is
+// kept ONLY for instant client-side feedback before the network call
+// resolves (see ExpenseCapture.jsx's live-classify effect) and is written
+// to score identically — same keyword lists, same trap > want > need
+// priority, same default. If you change app.py's classifier, update this
+// file to match, or better, delete this file and always await the API.
 const NEEDS_KEYWORDS = [
-  'rent','groceries','medicine','hospital','doctor','electricity','water','gas',
-  'transport','bus','auto','metro','school','college','fees','insurance',
-  'chai','tea','food','rice','dal','sabzi','milk','bread','egg',
-  'recharge','mobile','internet','wifi', 'petrol', 'diesel'
+  "rent","electricity","bill","bus","auto","metro","train","medicine","medical",
+  "hospital","doctor","tuition","fee","grocery","groceries","dal","rice","roti",
+  "sabzi","vegetables","milk","water","petrol","fuel","school","college","book",
+  "stationery","internet","mobile","recharge","uniform","repair","maintenance"
 ]
 const WANTS_KEYWORDS = [
-  'swiggy','zomato','blinkit','amazon','flipkart','netflix','hotstar','prime',
-  'movie','game','gaming','party','bar','beer','wine','mall','shopping',
-  'clothes','shoes','gadget','iphone','laptop','earphones','coffee','cafe',
-  'pizza','burger','ice cream','chocolate','snacks','chips','juice'
+  "swiggy","zomato","blinkit","instamart","amazon","flipkart","meesho","myntra",
+  "ajio","nykaa","movie","cinema","pvr","inox","cafe","coffee","starbucks","ccd",
+  "restaurant","hotel","dining","mall","shopping","clothes","fashion","shoe",
+  "gaming","game","netflix","hotstar","spotify","youtube","premium","subscription",
+  "party","celebration","gift","salon","spa","gym","fitness","travel","trip","tour",
+  "ola","uber","rapido","bike","taxi","holiday","vacation"
 ]
 const TRAP_KEYWORDS = [
-  'lottery','prize','won','claim','offer','discount','cashback','free',
-  'lucky','selected','otp','verify','kyc','block','urgent','suspended',
-  'crypto','invest','scheme','double','triple','guaranteed','return'
+  "lottery","prize","winner","won","congratulations","free money","claim",
+  "invest now","guaranteed return","double money","crypto tips","forex",
+  "mlm","network marketing","join now","limited offer","urgent","act fast",
+  "otp","share otp","verify account","kyc expire","block","suspended",
+  "phishing","unknown","suspicious","fraud","scam","hack"
 ]
- 
-export function classifyExpense(description) {
-  const lower = description.toLowerCase()
-  if (TRAP_KEYWORDS.some(k => lower.includes(k))) return 'trap'
-  if (WANTS_KEYWORDS.some(k => lower.includes(k))) return 'want'
-  if (NEEDS_KEYWORDS.some(k => lower.includes(k))) return 'need'
-  return 'want' // default to want if unclear
+
+export function classifyExpense(description, amount = 0) {
+  const text = description.toLowerCase().trim()
+  const trapScore = TRAP_KEYWORDS.filter(k => text.includes(k)).length
+  const wantScore = WANTS_KEYWORDS.filter(k => text.includes(k)).length
+  const needScore = NEEDS_KEYWORDS.filter(k => text.includes(k)).length
+
+  if (amount > 2000 && trapScore === 0 && wantScore === 0 && needScore === 0) {
+    return 'want'
+  }
+  if (trapScore > 0) return 'trap'
+  if (wantScore > needScore) return 'want'
+  if (needScore > 0) return 'need'
+  return 'need' // matches backend's default — was 'want' here before, a real disagreement
 }
  
 // Quick-tap category presets

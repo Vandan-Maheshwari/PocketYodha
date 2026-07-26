@@ -10,7 +10,8 @@ import Battle            from './pages/Battle'         // ← V2
 import SkillTree         from './pages/SkillTree'
 import Review            from './pages/Review'
 import Quests            from './pages/Quests'
-import Games             from './pages/Games'
+import Games              from './pages/Games'
+import ScamTrial          from './pages/ScamTrial'
 
 // ── Auth guard ──
 function Private({ children }) {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/review"    element={<Private><Review /></Private>} />
         <Route path="/quests"    element={<Private><Quests /></Private>} />
         <Route path="/games"     element={<Private><Games /></Private>} />
+        <Route path="/scam-trial" element={<Private><ScamTrial /></Private>} />
         <Route path="*"          element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

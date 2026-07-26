@@ -80,12 +80,14 @@ export default function Review() {
   useEffect(() => {
     const load = async () => {
       setLoading(true)
-      const res = await api.getWeeklyReview(user?.id || 'guest')
-      if (res) {
-        setData(res)
+      const res = user?.id && user?.authToken
+        ? await api.getWeeklyReview(user.id, user.authToken)
+        : { success: false }
+      if (res.success) {
+        setData(res.data)
         setTimeout(() => {
           setRevealed(true)
-          if (res.habit_score >= 75) { triggerConfetti(); triggerFireMessage(`🏆 ${res.verdict}!`) }
+          if (res.data.habit_score >= 75) { triggerConfetti(); triggerFireMessage(`🏆 ${res.data.verdict}!`) }
         }, 400)
       } else {
         // fallback demo data

@@ -547,6 +547,9 @@ export default function Register() {
   }
  
   const handleFinish = () => {
+    // register() sets local state synchronously and then persists to the
+    // backend in the background (fire-and-forget) — the cinematic doesn't
+    // need to wait on the network call.
     register(formData)
     setAwakening(true)
   }

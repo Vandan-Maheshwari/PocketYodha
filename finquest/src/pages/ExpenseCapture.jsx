@@ -46,6 +46,7 @@ export default function ExpenseCapture() {
   const [voiceText,   setVoiceText]   = useState('')
   const [shake,       setShake]       = useState(false)
   const [particles,   setParticles]   = useState([])
+  const [saveError,   setSaveError]   = useState(null)
  
   const fileRef = useRef(null)
  
@@ -54,7 +55,7 @@ export default function ExpenseCapture() {
     if (!description.trim() || description.length < 3) { setClassResult(null); return }
     const t = setTimeout(async () => {
       const res = await api.classify(description, parseFloat(amount) || 0)
-      if (res) setClassResult(res)
+      if (res.success) setClassResult(res.data)
     }, 500)
     return () => clearTimeout(t)
   }, [description, amount])
@@ -84,21 +85,21 @@ export default function ExpenseCapture() {
     const amt = parseFloat(amount)
  
     const res = await api.logExpense({
-      user_id:     user?.id || 'guest',
+      user_id:     user?.id,
       amount:      amt,
       description,
       category,
-    })
+    }, user?.authToken)
  
-    if (res) {
-      const cfg = TYPE_CONFIG[res.classified_as] || TYPE_CONFIG.need
+    if (res.success) {
+      const data = res.data
  
       // Game FX
-      if (res.classified_as === 'need') {
+      if (data.classified_as === 'need') {
         addXP(15)
         triggerXP(15, '#22c55e')
         triggerFireMessage('✅ Smart spend logged!')
-      } else if (res.classified_as === 'want') {
+      } else if (data.classified_as === 'want') {
         takeDamage(5)
         triggerDamage('−5 HP', '#f59e0b')
         triggerFlash('rgba(245,158,11,0.2)')
@@ -114,8 +115,8 @@ export default function ExpenseCapture() {
         amount: amt,
         description,
         category,
-        type: res.classified_as,
-        confidence: res.confidence,
+        type: data.classified_as,
+        confidence: data.confidence,
         time: new Date().toLocaleTimeString(),
       }, ...prev.slice(0, 4)])
  
@@ -124,11 +125,18 @@ export default function ExpenseCapture() {
       setClassResult(null)
       setIsLogging(false)
  
-      if (res.trigger_battle) {
+      if (data.trigger_battle) {
         setTimeout(() => navigate('/battle'), 1200)
       }
     } else {
+      // Previously this branch was unreachable in practice because the old
+      // api.js swallowed errors as `null` with no message — now we know why
+      // it failed and can tell the user instead of pretending nothing happened.
       setIsLogging(false)
+      setSaveError(res.error === 'network'
+        ? "Couldn't reach the server — this expense wasn't saved."
+        : `Couldn't save expense: ${res.error}`)
+      setTimeout(() => setSaveError(null), 4000)
     }
   }, [amount, description, category, user, addXP, takeDamage, navigate, triggerXP, triggerDamage, triggerFlash, triggerFireMessage])
  
@@ -161,10 +169,14 @@ export default function ExpenseCapture() {
     reader.onload = async (ev) => {
       const base64 = ev.target.result
       const res = await api.scanReceipt(base64)
-      if (res?.success) {
-        setDescription(res.raw_text.substring(0, 60))
-        if (res.extracted_amount) setAmount(String(res.extracted_amount))
-        if (res.classified_as) setClassResult({ type: res.classified_as, confidence: res.confidence })
+      if (res.success && res.data?.success) {
+        const data = res.data
+        setDescription(data.raw_text.substring(0, 60))
+        if (data.extracted_amount) setAmount(String(data.extracted_amount))
+        if (data.classified_as) setClassResult({ type: data.classified_as, confidence: data.confidence })
+      } else {
+        setSaveError(res.error === 'network' ? "Couldn't reach the server for OCR." : `Scan failed: ${res.error || res.data?.error}`)
+        setTimeout(() => setSaveError(null), 4000)
       }
       setScanning(false)
       setInputMode('manual')
@@ -179,6 +191,17 @@ export default function ExpenseCapture() {
     <div style={s.root}>
       <GameFXStyles />
       <FXLayer />
+
+      {saveError && (
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 999,
+          background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.5)',
+          color: '#fca5a5', padding: '10px 18px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+          maxWidth: '90vw', textAlign: 'center',
+        }}>
+          ⚠️ {saveError}
+        </div>
+      )}
  
       {/* Floating particles */}
       <div style={s.particleLayer}>

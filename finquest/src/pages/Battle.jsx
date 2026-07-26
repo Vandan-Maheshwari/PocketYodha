@@ -80,9 +80,11 @@ const DEMONS = [
  
 export default function Battle() {
   const navigate   = useNavigate()
-  const user       = useUserStore((s) => s.user)
-  const addXP      = useUserStore((s) => s.addXP)
-  const takeDamage = useUserStore((s) => s.takeDamage)
+  const user             = useUserStore((s) => s.user)
+  const addXP            = useUserStore((s) => s.addXP)
+  const takeDamage       = useUserStore((s) => s.takeDamage)
+  const recordBattleWin  = useUserStore((s) => s.recordBattleWin)
+  const recordBattleLoss = useUserStore((s) => s.recordBattleLoss)
   const { triggerXP, triggerDamage, triggerConfetti, triggerFlash, triggerFireMessage, FXLayer } = useGameFX()
  
   const [demon,      setDemon]      = useState(null)
@@ -156,29 +158,35 @@ export default function Battle() {
     if (win) {
       setDemonHp(0)
       addXP(choice.xp)
+      recordBattleWin()
       triggerXP(choice.xp, demon.color)
       triggerConfetti()
       triggerFireMessage(getFireMessage?.() || '🔥 Victory!')
       triggerFlash(`${demon.glow.replace('0.4', '0.15')}`)
     } else {
       takeDamage(Math.abs(choice.hp))
+      recordBattleLoss()
       triggerDamage(`${choice.hp} HP`, '#ef4444')
       triggerFlash('rgba(239,68,68,0.25)')
       setShake(true)
       setTimeout(() => setShake(false), 500)
     }
  
-    await api.logBattle(
-      user?.id || 'guest',
-      win ? 'win' : 'lose',
-      demon.name,
-      win ? choice.xp : 0,
-      win ? 0 : choice.hp
-    )
+    if (user?.id && user?.authToken) {
+      const res = await api.logBattle(
+        user.id,
+        win ? 'win' : 'lose',
+        demon.name,
+        win ? choice.xp : 0,
+        win ? 0 : choice.hp,
+        user.authToken
+      )
+      if (!res.success) console.warn('Battle result not saved to server:', res.error)
+    }
  
     setResult({ win, xp: choice.xp, hp: choice.hp, choice })
     setTimeout(() => setPhase('result'), 300)
-  }, [demon, addXP, takeDamage, triggerXP, triggerDamage, triggerConfetti, triggerFlash, triggerFireMessage, user])
+  }, [demon, addXP, takeDamage, recordBattleWin, recordBattleLoss, triggerXP, triggerDamage, triggerConfetti, triggerFlash, triggerFireMessage, user])
  
   if (!demon) return <div style={{ background: '#060818', minHeight: '100vh' }} />
  
