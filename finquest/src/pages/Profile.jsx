@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/userStore'
 import { useGameFX, GameFXStyles } from '../components/GameFX'
-import { LEVEL_TITLES } from '../store/gameEngine'
+import { getTitleForLevel, xpForLevel } from '../store/gameEngine'
 
 const BADGE_LIST = [
   { id: 'first_log',   icon: '📝', name: 'First Log',     desc: 'Logged first expense',     xp: 10  },
@@ -35,11 +35,11 @@ export default function Profile() {
   const [hunterName, setHunterName] = useState(user?.hunterName || '')
 
   const level  = user?.level || 1
-  const title  = (LEVEL_TITLES && LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)]) || 'Broke Beginner'
+  const title  = getTitleForLevel(level).title
   const xp     = user?.xp || 0
-  const xpNext = level * 100
-  const xpPct  = Math.min((xp % xpNext) / xpNext * 100, 100)
-  const hpPct  = Math.min(((user?.hp || 0) / 500) * 100, 100)
+  const xpNext = user?.xpToNext || xpForLevel(level)
+  const xpPct  = Math.min((xp / xpNext) * 100, 100)
+  const hpPct  = Math.min(((user?.hp || 0) / (user?.maxHp || 100)) * 100, 100)
 
   // earned badges (mock — first 3 always earned for demo)
   const earned = BADGE_LIST.slice(0, Math.max(1, Math.min(level, BADGE_LIST.length)))
@@ -126,7 +126,7 @@ export default function Profile() {
             <div style={s.miniBar}>
               <div style={s.miniBarLabel}>
                 <span style={{ color: '#c084fc' }}>XP</span>
-                <span style={{ color: '#475569' }}>{Math.round(xp % xpNext)}/{xpNext}</span>
+                <span style={{ color: '#475569' }}>{Math.round(xp)}/{xpNext}</span>
               </div>
               <div style={s.miniTrack}>
                 <div style={{ ...s.miniXpFill, width: `${xpPct}%` }} />

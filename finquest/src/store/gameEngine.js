@@ -80,7 +80,7 @@ export const ACHIEVEMENTS = [
 
 // ── DAILY MISSIONS ──
 export function generateDailyMissions(user) {
-  const isStudent = user.occupation === 'student'
+  const isStudent = user?.occupation === 'student'
   const all = [
     { id: 'log_3',      title: 'Log 3 Expenses',          desc: 'Track your spending',            xp: 30,  emoji: '📒', type: 'entry',   target: 3 },
     { id: 'win_battle', title: 'Defeat a Demon',           desc: 'Win 1 impulse battle',           xp: 50,  emoji: '⚔️', type: 'battle',  target: 1 },

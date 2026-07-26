@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { xpForLevel, rankFromLevel } from './gameEngine'
+import { xpForLevel, rankFromLevel, getTitleForLevel } from './gameEngine'
+export { xpForLevel, rankFromLevel, getTitleForLevel }
 import api from '../api'
 
 // ─────────────────────────────────────────

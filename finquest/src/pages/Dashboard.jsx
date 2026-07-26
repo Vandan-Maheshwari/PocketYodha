@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '../store/userStore'
 import { useGameFX, GameFXStyles } from '../components/GameFX'
-import { LEVEL_TITLES, generateDailyMissions, getWeeklyChallenge } from '../store/gameEngine'
+import { getTitleForLevel, xpForLevel, generateDailyMissions, getWeeklyChallenge } from '../store/gameEngine'
 
 const NAV = [
   { icon: '⚔️', label: 'Log',     path: '/expenses' },
@@ -34,12 +34,12 @@ export default function Dashboard() {
   const canvasRef = useRef(null)
 
   const xp        = user?.xp    || 0
-  const hp        = user?.hp    || 500
+  const hp        = user?.hp    || 100
   const level     = user?.level || 1
-  const title     = (LEVEL_TITLES && LEVEL_TITLES[Math.min(level - 1, LEVEL_TITLES.length - 1)]) || 'Broke Beginner'
-  const xpForNext = level * 100
-  const xpPct     = Math.min((xp % xpForNext) / xpForNext * 100, 100)
-  const hpPct     = Math.min((hp / 500) * 100, 100)
+  const title     = getTitleForLevel(level).title
+  const xpForNext = user?.xpToNext || xpForLevel(level)
+  const xpPct     = Math.min((xp / xpForNext) * 100, 100)
+  const hpPct     = Math.min((hp / (user?.maxHp || 100)) * 100, 100)
   const income    = user?.income || 0
   const saveAmt   = Math.round(income * ((user?.savePercent || 20) / 100))
   const dailyBudget = Math.round((income - saveAmt) / 30)
@@ -66,9 +66,8 @@ export default function Dashboard() {
 
   // missions
   useEffect(() => {
-    if (generateDailyMissions) setMissions(generateDailyMissions().slice(0, 3))
-  }, [])
-
+    if (generateDailyMissions) setMissions(generateDailyMissions(user).slice(0, 3))
+  }, [user])
   const completeMission = (id, xpReward) => {
     if (doneIds.includes(id)) return
     setDoneIds(p => [...p, id])
@@ -142,7 +141,7 @@ export default function Dashboard() {
           <div style={s.barSection}>
             <div style={s.barLabel}>
               <span style={{ color: '#c084fc' }}>⚡ XP</span>
-              <span style={{ color: '#64748b' }}>{Math.round(xp % xpForNext)} / {xpForNext}</span>
+              <span style={{ color: '#64748b' }}>{Math.round(xp)} / {xpForNext}</span>
             </div>
             <div style={s.barTrack}>
               <div style={{ ...s.xpFill, width: `${xpPct}%` }} />
